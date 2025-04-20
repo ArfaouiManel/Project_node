@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TicketPro - Account Access</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --primary-dark: #2980b9;
+            --secondary: #2ecc71;
+            --dark: #34495e;
+            --light: #ecf0f1;
+            --danger: #e74c3c;
+            --text: #2c3e50;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .auth-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .auth-image {
+            flex: 1;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 2rem;
+        }
+
+        .auth-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .auth-form {
+            max-width: 400px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--dark);
+        }
+
+        .form-tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .tab:hover:not(.active) {
+            border-bottom: 2px solid #ddd;
+        }
+
+        .form-content {
+            display: none;
+        }
+
+        .form-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            transition: border 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+
+        .alert {
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .alert-danger {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .alert-success {
+            background-color: rgba(46, 204, 113, 0.1);
+            color: var(--secondary);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .form-footer a {
+            color: var(--primary);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .form-footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .auth-container {
+                flex-direction: column;
+            }
+
+            .auth-image {
+                display: none;
+            }
+
+            .auth-content {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-image">
+            <div>
+                <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">TicketPro</h2>
+                <p style="font-size: 1.2rem; opacity: 0.9;">Streamlined ticket management solution for modern teams</p>
+            </div>
+        </div>
+        <div class="auth-content">
+            <div class="auth-form">
+                <div class="logo">TicketPro</div>
+
+                <div class="form-tabs">
+                    <div class="tab active" data-tab="login">Sign In</div>
+                    <div class="tab" data-tab="signup">Create Account</div>
+                </div>
+
+                <!-- Login Form -->
+                <div id="login-content" class="form-content active">
+                    <h1>Welcome back</h1>
+                    <div id="login-error" class="alert alert-danger"></div>
+
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="login-email">Email address</label>
+                            <input type="email" id="login-email" name="email" required placeholder="your@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" name="password" required
+                                placeholder="Your password">
+                        </div>
+                        <button type="submit" class="btn btn-block">Sign in</button>
+                    </form>
+
+                    <div class="form-footer">
+                        <p>Don't have an account? <a class="switch-tab" data-tab="signup">Sign up</a></p>
+                        <p style="margin-top: 10px;"><a href="#">Forgot password?</a></p>
+                    </div>
+                </div>
+
+                <!-- Signup Form -->
+                <div id="signup-content" class="form-content">
+                    <h1>Create an account</h1>
+                    <div id="signup-error" class="alert alert-danger"></div>
+                    <div id="signup-success" class="alert alert-success"></div>
+
+                    <form id="signup-form">
+                        <div class="form-group">
+                            <label for="signup-name">Full Name</label>
+                            <input type="text" id="signup-name" name="name" required placeholder="John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-email">Email address</label>
+                            <input type="email" id="signup-email" name="email" required placeholder="your@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-password">Password</label>
+                            <input type="password" id="signup-password" name="password" required
+                                placeholder="Choose a strong password">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password">Confirm Password</label>
+                            <input type="password" id="confirm-password" name="confirm-password" required
+                                placeholder="Confirm your password">
+                        </div>
+                        <button type="submit" class="btn btn-block">Create Account</button>
+                    </form>
+
+                    <div class="form-footer">
+                        <p>Already have an account? <a class="switch-tab" data-tab="login">Sign in</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        const tabs = document.querySelectorAll('.tab');
+        const switchTabLinks = document.querySelectorAll('.switch-tab');
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.getAttribute('data-tab') === tabName);
+            });
+
+            // Update content sections
+            document.querySelectorAll('.form-content').forEach(content => {
+                content.classList.toggle('active', content.id === `${tabName}-content`);
+            });
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                switchTab(tabName);
+            });
+        });
+
+        switchTabLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const tabName = link.getAttribute('data-tab');
+                switchTab(tabName);
+            });
+        });
+
+        // Login form handling
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Login failed');
+                }
+
+                // Store token and user info in localStorage
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+
+                // Redirect to dashboard
+                window.location.href = '/dashboard';
+            } catch (error) {
+                const errorMsg = document.getElementById('login-error');
+                errorMsg.textContent = error.message;
+                errorMsg.style.display = 'block';
+            }
+        });
+
+        // Signup form handling
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Reset messages
+            document.getElementById('signup-error').style.display = 'none';
+            document.getElementById('signup-success').style.display = 'none';
+
+            // Password validation
+            if (password !== confirmPassword) {
+                const errorMsg = document.getElementById('signup-error');
+                errorMsg.textContent = 'Passwords do not match';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, email, password }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Registration failed');
+                }
+
+                // Show success message
+                const successMsg = document.getElementById('signup-success');
+                successMsg.textContent = 'Account created successfully! You can now log in.';
+                successMsg.style.display = 'block';
+
+                // Clear the form
+                document.getElementById('signup-form').reset();
+
+                // Switch to login tab after a short delay
+                setTimeout(() => {
+                    switchTab('login');
+                }, 2000);
+            } catch (error) {
+                const errorMsg = document.getElementById('signup-error');
+                errorMsg.textContent = error.message;
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+
+</html>
