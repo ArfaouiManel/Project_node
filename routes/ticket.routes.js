@@ -1,25 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const {
-  createTicket,
-  getTickets,
-  updateTicket,
-  deleteTicket, 
-  getSummary, 
-  getGraphData
-} = require('../controllers/ticket.controller');
-const { protect, isAdmin } = require('../middlewares/auth.middleware');
+const ticketController = require('../controllers/ticket.controller');
+const { isAuthenticated, isAdmin } = require('../middlewares/auth.middleware');
 
-router.use(protect);
+// Ticket Routes
+router.post('/createTicket', isAuthenticated, ticketController.createTicket);
+router.get('/getTicket', isAuthenticated, ticketController.getTickets);
+router.put('/updateTicket/:id', isAuthenticated, ticketController.updateTicket);
+router.delete('/deleteTicket/:id', isAuthenticated, isAdmin, ticketController.deleteTicket);
+router.post('/assignTicket/:id', isAuthenticated, isAdmin, ticketController.assignTicket);
+router.get('/summary', isAuthenticated, ticketController.getSummary);
+router.get('/graph-data', isAuthenticated, ticketController.getGraphData);
 
-router.post('/createTicket', createTicket);
-router.get('/getTicket', getTickets);
-router.put('/updateTicket/:id', isAdmin, updateTicket);
-router.delete('/deleteTicket/:id', isAdmin, deleteTicket);
-
-
-router.get('/summary', getSummary);
-
-// Tickets par jour pour graphiques
-router.get('/graph-data', getGraphData);
 module.exports = router;

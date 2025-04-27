@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TicketPro</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        .sidebar {
+            transition: all 0.3s;
+        }
+
+        .sidebar-collapsed {
+            width: 5rem;
+        }
+
+        .content-expanded {
+            margin-left: 5rem;
+        }
+
+        .hidden-sidebar {
+            display: none;
+        }
+
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+        }
+
+        .ticket-card {
+            transition: all 0.3s;
+        }
+
+        .ticket-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-open {
+            background-color: #FECACA;
+            color: #B91C1C;
+        }
+
+        .status-progress {
+            background-color: #FEF3C7;
+            color: #92400E;
+        }
+
+        .status-closed {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
+        <div class="bg-white p-5 rounded-lg shadow-lg flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-3"></div>
+            <p class="text-gray-700">Loading dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notification"
+        class="fixed top-4 right-4 z-50 transform transition-transform duration-300 translate-x-full">
+        <div
+            class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md flex justify-between items-center">
+            <div id="notification-message">Success message here</div>
+            <button onclick="hideNotification()" class="text-green-700 hover:text-green-900">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="bg-gray-800 text-white w-64 sidebar min-h-screen">
+            <div class="p-4 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-ticket-alt text-blue-400"></i>
+                    <span id="sidebar-title" class="font-bold text-xl">TicketHub</span>
+                </div>
+                <button id="collapse-btn" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <div class="border-t border-gray-700 my-2"></div>
+
+            <div id="user-info" class="p-4 flex items-center space-x-3">
+                <div class="bg-blue-500 rounded-full h-10 w-10 flex items-center justify-center">
+                    <span id="user-initials" class="font-bold text-white">JD</span>
+                </div>
+                <div>
+                    <h3 id="user-name" class="font-semibold"></h3>
+                    <p id="user-role" class="text-xs text-gray-400">Admin</p>
+                </div>
+            </div>
+
+            <nav class="mt-6">
+                <ul>
+                    <li class="nav-item">
+                        <a href="#" class="block py-3 px-4 flex items-center space-x-3 hover:bg-gray-700 rounded mx-2"
+                            data-target="dashboard-content">
+                            <i class="fas fa-home w-5 text-center"></i>
+                            <span class="sidebar-text">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="block py-3 px-4 flex items-center space-x-3 hover:bg-gray-700 rounded mx-2"
+                            data-target="tickets-content">
+                            <div class="relative">
+                                <i class="fas fa-ticket-alt w-5 text-center"></i>
+                                <span id="ticket-count"
+                                    class="badge bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                            </div>
+                            <span class="sidebar-text">My Tickets</span>
+                        </a>
+                    </li>
+                    <li id="admin-tickets-nav" class="nav-item hidden">
+                        <a href="#" class="block py-3 px-4 flex items-center space-x-3 hover:bg-gray-700 rounded mx-2"
+                            data-target="admin-tickets-content">
+                            <i class="fas fa-tasks w-5 text-center"></i>
+                            <span class="sidebar-text">All Tickets</span>
+                        </a>
+                    </li>
+                    <li id="analytics-nav" class="nav-item hidden">
+                        <a href="#" class="block py-3 px-4 flex items-center space-x-3 hover:bg-gray-700 rounded mx-2"
+                            data-target="analytics-content">
+                            <i class="fas fa-chart-line w-5 text-center"></i>
+                            <span class="sidebar-text">Analytics</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="block py-3 px-4 flex items-center space-x-3 hover:bg-gray-700 rounded mx-2"
+                            data-target="profile-content">
+                            <i class="fas fa-user w-5 text-center"></i>
+                            <span class="sidebar-text">Profile</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="absolute bottom-0  py-4">
+                <a href="#" id="logout-btn"
+                    class="block py-3 px-4 flex items-center space-x-3 hover:bg-gray-700 rounded mx-2">
+                    <i class="fas fa-sign-out-alt w-5 text-center"></i>
+                    <span class="sidebar-text">Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <header class="bg-white shadow-sm">
+                <div class="py-4 px-6 flex justify-between items-center">
+                    <h1 id="page-title" class="text-2xl font-semibold text-gray-800">Dashboard</h1>
+                    <div class="flex items-center space-x-4">
+                        <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <button id="notifications-btn" class="p-2 rounded-full hover:bg-gray-200 relative">
+                            <i class="fas fa-bell"></i>
+                            <span
+                                class="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">3</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div id="dashboard-content" class="content-section p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow-md p-6 flex items-center space-x-4">
+                        <div class="bg-blue-100 p-3 rounded-full">
+                            <i class="fas fa-ticket-alt text-blue-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Tickets</p>
+                            <h3 id="total-tickets" class="text-2xl font-bold">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 flex items-center space-x-4">
+                        <div class="bg-red-100 p-3 rounded-full">
+                            <i class="fas fa-exclamation-circle text-red-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">Open Tickets</p>
+                            <h3 id="open-tickets" class="text-2xl font-bold">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 flex items-center space-x-4">
+                        <div class="bg-yellow-100 p-3 rounded-full">
+                            <i class="fas fa-clock text-yellow-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">In Progress</p>
+                            <h3 id="progress-tickets" class="text-2xl font-bold">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 flex items-center space-x-4">
+                        <div class="bg-green-100 p-3 rounded-full">
+                            <i class="fas fa-check-circle text-green-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">Closed Tickets</p>
+                            <h3 id="closed-tickets" class="text-2xl font-bold">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-lg font-semibold mb-4">Recent Tickets</h2>
+                        <div id="recent-tickets" class="space-y-4">
+                            <div class="animate-pulse flex space-x-4">
+                                <div class="flex-1 space-y-4 py-1">
+                                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                    <div class="space-y-2">
+                                        <div class="h-4 bg-gray-200 rounded"></div>
+                                        <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-lg font-semibold mb-4">Ticket Distribution</h2>
+                        <div class="h-64">
+                            <canvas id="status-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-lg font-semibold mb-4">Ticket Timeline</h2>
+                    <div class="h-64">
+                        <canvas id="timeline-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tickets Content -->
+            <div id="tickets-content" class="content-section hidden p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold">My Tickets</h2>
+                    <button id="create-ticket-btn"
+                        class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-plus"></i>
+                        <span>New Ticket</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div
+                        class="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 mb-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="relative">
+                                <input type="text" id="ticket-search" placeholder="Search tickets..."
+                                    class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-64">
+                                <i
+                                    class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                            <select id="status-filter"
+                                class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="all">All Status</option>
+                                <option value="ouvert">Open</option>
+                                <option value="en cours">In Progress</option>
+                                <option value="clôturé">Closed</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">Sort by:</span>
+                            <select id="sort-tickets"
+                                class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="title">Title A-Z</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="user-tickets-container" class="divide-y">
+                        <div class="animate-pulse flex space-x-4 py-4">
+                            <div class="flex-1 space-y-4 py-1">
+                                <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                <div class="space-y-2">
+                                    <div class="h-4 bg-gray-200 rounded"></div>
+                                    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-between items-center">
+                        <div>
+                            <span class="text-sm text-gray-500">Showing <span id="showing-tickets">0</span> of <span
+                                    id="total-user-tickets">0</span> tickets</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button id="prev-page"
+                                class="px-3 py-1 border rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button id="next-page"
+                                class="px-3 py-1 border rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Tickets Content -->
+            <div id="admin-tickets-content" class="content-section hidden p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold">All Tickets Management</h2>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div
+                        class="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 mb-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="relative">
+                                <input type="text" id="admin-ticket-search" placeholder="Search tickets..."
+                                    class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-64">
+                                <i
+                                    class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                            <select id="admin-status-filter"
+                                class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="all">All Status</option>
+                                <option value="ouvert">Open</option>
+                                <option value="en cours">In Progress</option>
+                                <option value="clôturé">Closed</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">Sort by:</span>
+                            <select id="admin-sort-tickets"
+                                class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="title">Title A-Z</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="admin-tickets-container" class="divide-y">
+                        <div class="animate-pulse flex space-x-4 py-4">
+                            <div class="flex-1 space-y-4 py-1">
+                                <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                <div class="space-y-2">
+                                    <div class="h-4 bg-gray-200 rounded"></div>
+                                    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-between items-center">
+                        <div>
+                            <span class="text-sm text-gray-500">Showing <span id="showing-admin-tickets">0</span> of
+                                <span id="total-admin-tickets">0</span> tickets</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button id="admin-prev-page"
+                                class="px-3 py-1 border rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button id="admin-next-page"
+                                class="px-3 py-1 border rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Content -->
+            <div id="analytics-content" class="content-section hidden p-6">
+                <h2 class="text-xl font-semibold mb-6">Analytics Dashboard</h2>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">Ticket Status Distribution</h3>
+                        <div class="h-64">
+                            <canvas id="analytics-status-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">Tickets Created Over Time</h3>
+                        <div class="h-64">
+                            <canvas id="analytics-timeline-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">User Statistics</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-medium text-gray-600">Total Users</span>
+                                    <span id="total-users" class="font-semibold">0</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full">
+                                    <div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-medium text-gray-600">Admin Users</span>
+                                    <span id="admin-users" class="font-semibold">0</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full">
+                                    <div id="admin-users-bar" class="bg-purple-500 h-2 rounded-full" style="width: 25%">
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-medium text-gray-600">Regular Users</span>
+                                    <span id="regular-users" class="font-semibold">0</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full">
+                                    <div id="regular-users-bar" class="bg-green-500 h-2 rounded-full"
+                                        style="width: 75%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">Response Time</h3>
+                        <div class="flex flex-col justify-center items-center h-full">
+                            <div class="relative">
+                                <svg class="w-32 h-32">
+                                    <circle class="text-gray-200" stroke-width="10" stroke="currentColor"
+                                        fill="transparent" r="56" cx="64" cy="64"></circle>
+                                    <circle id="response-circle" class="text-blue-500" stroke-width="10"
+                                        stroke-dasharray="350" stroke-dashoffset="175" stroke="currentColor"
+                                        fill="transparent" r="56" cx="64" cy="64"></circle>
+                                </svg>
+                                <div
+                                    class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                                    <p class="text-3xl font-bold" id="avg-response-time">12h</p>
+                                    <p class="text-sm text-gray-500">Avg. Response</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">Resolution Rate</h3>
+                        <div class="flex flex-col justify-center items-center h-full">
+                            <div class="relative">
+                                <svg class="w-32 h-32">
+                                    <circle class="text-gray-200" stroke-width="10" stroke="currentColor"
+                                        fill="transparent" r="56" cx="64" cy="64"></circle>
+                                    <circle id="resolution-circle" class="text-green-500" stroke-width="10"
+                                        stroke-dasharray="350" stroke-dashoffset="105" stroke-linecap="round"
+                                        stroke="currentColor" fill="transparent" r="56" cx="64" cy="64"></circle>
+                                </svg>
+                                <div
+                                    class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                                    <p class="text-3xl font-bold" id="resolution-rate">70%</p>
+                                    <p class="text-sm text-gray-500">Resolution</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4">Ticket Analytics</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Metric</th>
+                                    <th
+                                        class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Last 7 Days</th>
+                                    <th
+                                        class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Last 30 Days</th>
+                                    <th
+                                        class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        All Time</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">New
+                                        Tickets</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">12</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">45</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">123</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Closed
+                                        Tickets</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">8</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">32</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">87</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Avg.
+                                        Resolution Time</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">10h 23m</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">11h 45m</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">12h 12m</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        Satisfaction Rate</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">92%</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">89%</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">87%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Content -->
+            <div id="profile-content" class="content-section hidden p-6">
+                <h2 class="text-xl font-semibold mb-6">My Profile</h2>
+
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div
+                        class="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
+                        <div class="bg-blue-100 rounded-full h-24 w-24 flex items-center justify-center text-3xl font-bold text-blue-500"
+                            id="profile-avatar">
+                            JD
+                        </div>
+                        <div>
+                            <h3 id="profile-name" class="text-xl font-semibold">John Doe</h3>
+                            <p id="profile-email" class="text-gray-500">john.doe@example.com</p>
+                            <p class="mt-1 flex items-center">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                                    id="profile-role">Admin</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">Update Profile</h3>
+                        <form id="profile-form">
+                            <div class="mb-4">
+                                <label for="profile-update-name"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <input type="text" id="profile-update-name"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label for="profile-update-email"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                <input type="email" id="profile-update-email"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <button type="submit"
+                                class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">Update
+                                Profile</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold mb-4">Change Password</h3>
+                        <form id="password-form">
+                            <div class="mb-4">
+                                <label for="current-password"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                                <input type="password" id="current-password"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">New
+                                    Password</label>
+                                <input type="password" id="new-password"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label for="confirm-password"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                                <input type="password" id="confirm-password"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <button type="submit"
+                                class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">Change
+                                Password</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+                    <div class="space-y-4" id="recent-activity">
+                        <div class="flex items-start space-x-3">
+                            <div class="bg-blue-100 p-2 rounded-full">
+                                <i class="fas fa-ticket-alt text-blue-500"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">You created a new ticket: <span class="font-semibold">Website login
+                                        issue</span></p>
+                                <p class="text-xs text-gray-500">3 days ago</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="bg-green-100 p-2 rounded-full">
+                                <i class="fas fa-comment text-green-500"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">You commented on ticket: <span class="font-semibold">Server
+                                        maintenance</span></p>
+                                <p class="text-xs text-gray-500">5 days ago</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="bg-purple-100 p-2 rounded-full">
+                                <i class="fas fa-user-edit text-purple-500"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">You updated your profile</p>
+                                <p class="text-xs text-gray-500">1 week ago</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Create Ticket Modal -->
+    <div id="create-ticket-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Create New Ticket</h3>
+                <button class="text-gray-500 hover:text-gray-700 close-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="create-ticket-form">
+                <div class="mb-4">
+                    <label for="ticket-title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <input type="text" id="ticket-title"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required>
+                </div>
+                <div class="mb-4">
+                    <label for="ticket-description"
+                        class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="ticket-description" rows="4"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required></textarea>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button"
+                        class="px-4 py-2 border rounded-lg hover:bg-gray-100 close-modal">Cancel</button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">Create
+                        Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Ticket Modal -->
+    <div id="view-ticket-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold" id="view-ticket-title">Ticket Title</h3>
+                <button class="text-gray-500 hover:text-gray-700 close-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
+                <span id="view-ticket-id" class="text-sm text-gray-500">#123456</span>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm">Status:</span>
+                    <span id="view-ticket-status" class="px-2 py-1 text-xs rounded-full status-open">Open</span>
+                </div>
+            </div>
+            <div class="mb-6">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Description</h4>
+                <p id="view-ticket-description" class="text-gray-600 bg-gray-50 p-3 rounded-lg">Ticket description will
+                    appear here.</p>
+            </div>
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-sm font-medium text-gray-700">Details</h4>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-gray-500">Created By</p>
+                            <p id="view-ticket-creator" class="text-sm">John Doe</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Created On</p>
+                            <p id="view-ticket-date" class="text-sm">April 25, 2025</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Assigned To</p>
+                            <p id="view-ticket-assignee" class="text-sm">Not assigned</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Last Updated</p>
+                            <p id="view-ticket-updated" class="text-sm">April 25, 2025</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-only-actions hidden mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-sm font-medium text-gray-700">Admin Actions</h4>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label for="update-status" class="block text-xs text-gray-500 mb-1">Update Status</label>
+                            <select id="update-status"
+                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="ouvert">Open</option>
+                                <option value="en cours">In Progress</option>
+                                <option value="clôturé">Closed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="assign-user" class="block text-xs text-gray-500 mb-1">Assign to User</label>
+                            <select id="assign-user"
+                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select a user</option>
+                            </select>
+                        </div>
+                        <div class="text-right space-x-2">
+                            <button id="assign-ticket-btn"
+                                class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg">Assign
+                                Ticket</button>
+                            <button id="save-status-btn"
+                                class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">Save
+                                Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button type="button" class="px-4 py-2 border rounded-lg hover:bg-gray-100 close-modal">Close</button>
+                <button id="delete-ticket-btn"
+                    class="admin-only hidden bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg">Delete
+                    Ticket</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        let currentUser = null;
+        let allTickets = [];
+        let userTickets = [];
+        let allUsers = []; // Store all users for assignment
+        let currentPage = 1;
+        let adminCurrentPage = 1;
+        const ticketsPerPage = 5;
+        let statusChart = null;
+        let timelineChart = null;
+        let analyticsStatusChart = null;
+        let analyticsTimelineChart = null;
+        let darkMode = false;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/auth';
+                return;
+            }
+
+            // Parse user from localStorage
+            try {
+                currentUser = JSON.parse(localStorage.getItem('user'));
+                if (!currentUser) {
+                    logout();
+                    return;
+                }
+
+                // Initialize user interface
+                initializeUI();
+
+                // Load data
+                loadDashboardData();
+                loadTickets();
+
+                if (currentUser.role === 'admin') {
+                    document.getElementById('admin-tickets-nav').classList.remove('hidden');
+                    document.getElementById('analytics-nav').classList.remove('hidden');
+                    loadAdminTickets();
+                    loadUsers(); // Load users for assignment
+                }
+            } catch (error) {
+                console.error('Error initializing:', error);
+                logout();
+            }
+        });
+
+
+        function initializeUI() {
+
+            setUserInfo();
+
+
+            initNavigation();
+
+            initEventListeners();
+
+            initCharts();
+
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+
+        function setUserInfo() {
+            // Set user info in sidebar
+            document.getElementById('user-name').textContent = currentUser.name;
+            document.getElementById('user-role').textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+
+            // Set user initials
+            const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            document.getElementById('user-initials').textContent = initials;
+
+            // Set profile info
+            document.getElementById('profile-name').textContent = currentUser.name;
+            document.getElementById('profile-email').textContent = currentUser.email;
+            document.getElementById('profile-role').textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+            document.getElementById('profile-avatar').textContent = initials;
+
+            // Set form values
+            document.getElementById('profile-update-name').value = currentUser.name;
+            document.getElementById('profile-update-email').value = currentUser.email;
+        }
+
+        function initNavigation() {
+            document.querySelectorAll('.nav-item a').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = e.currentTarget.getAttribute('data-target');
+
+                    // Hide all content sections
+                    document.querySelectorAll('.content-section').forEach(section => {
+                        section.classList.add('hidden');
+                    });
+
+                    // Show target content section
+                    document.getElementById(target).classList.remove('hidden');
+
+                    // Update page title
+                    document.getElementById('page-title').textContent = e.currentTarget.querySelector('.sidebar-text').textContent;
+
+                    // If mobile, collapse sidebar
+                    if (window.innerWidth < 768) {
+                        toggleSidebar();
+                    }
+                });
+            });
+
+            // Handle sidebar toggle
+            document.getElementById('collapse-btn').addEventListener('click', toggleSidebar);
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarTitle = document.getElementById('sidebar-title');
+            const sidebarTexts = document.querySelectorAll('.sidebar-text');
+
+            sidebar.classList.toggle('sidebar-collapsed');
+
+            if (sidebar.classList.contains('sidebar-collapsed')) {
+                sidebarTitle.classList.add('hidden-sidebar');
+                sidebarTexts.forEach(text => text.classList.add('hidden-sidebar'));
+                document.querySelector('main').classList.add('content-expanded');
+            } else {
+                setTimeout(() => {
+                    sidebarTitle.classList.remove('hidden-sidebar');
+                    sidebarTexts.forEach(text => text.classList.remove('hidden-sidebar'));
+                }, 150);
+                document.querySelector('main').classList.remove('content-expanded');
+            }
+        }
+
+        function initEventListeners() {
+            document.getElementById('create-ticket-btn').addEventListener('click', () => {
+                document.getElementById('create-ticket-modal').classList.remove('hidden');
+            });
+
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#create-ticket-modal, #view-ticket-modal').forEach(modal => {
+                        modal.classList.add('hidden');
+                    });
+                });
+            });
+
+            // Create ticket form
+            document.getElementById('create-ticket-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                createTicket();
+            });
+
+            // Profile update form
+            document.getElementById('profile-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                updateProfile();
+            });
+
+            // Password update form
+            document.getElementById('password-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                updatePassword();
+            });
+
+            // Theme toggle
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+            // Ticket search and filters
+            document.getElementById('ticket-search').addEventListener('input', filterUserTickets);
+            document.getElementById('status-filter').addEventListener('change', filterUserTickets);
+            document.getElementById('sort-tickets').addEventListener('change', filterUserTickets);
+
+            // Admin ticket search and filters
+            document.getElementById('admin-ticket-search').addEventListener('input', filterAdminTickets);
+            document.getElementById('admin-status-filter').addEventListener('change', filterAdminTickets);
+            document.getElementById('admin-sort-tickets').addEventListener('change', filterAdminTickets);
+
+            // Pagination
+            document.getElementById('prev-page').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderUserTickets();
+                }
+            });
+
+            document.getElementById('next-page').addEventListener('click', () => {
+                const maxPages = Math.ceil(userTickets.length / ticketsPerPage);
+                if (currentPage < maxPages) {
+                    currentPage++;
+                    renderUserTickets();
+                }
+            });
+
+            // Admin pagination
+            document.getElementById('admin-prev-page').addEventListener('click', () => {
+                if (adminCurrentPage > 1) {
+                    adminCurrentPage--;
+                    renderAdminTickets();
+                }
+            });
+
+            document.getElementById('admin-next-page').addEventListener('click', () => {
+                const maxPages = Math.ceil(allTickets.length / ticketsPerPage);
+                if (adminCurrentPage < maxPages) {
+                    adminCurrentPage++;
+                    renderAdminTickets();
+                }
+            });
+
+            document.getElementById('save-status-btn').addEventListener('click', updateTicketStatus);
+
+            document.getElementById('assign-ticket-btn').addEventListener('click', assignTicket);
+
+            document.getElementById('delete-ticket-btn').addEventListener('click', deleteTicket);
+
+            // Logout button
+            document.getElementById('logout-btn').addEventListener('click', logout);
+        }
+
+        async function loadUsers() {
+            if (currentUser.role !== 'admin') return;
+
+            try {
+                const response = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load users');
+
+                allUsers = await response.json();
+                populateUserDropdown();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showNotification('Failed to load users', 'error');
+            }
+        }
+
+        function populateUserDropdown() {
+            const assignUserSelect = document.getElementById('assign-user');
+            assignUserSelect.innerHTML = '<option value="">Select a user</option>';
+
+            // Filter out admin users
+            const nonAdminUsers = allUsers.filter(user => user.role !== 'admin');
+            nonAdminUsers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user._id;
+                option.textContent = `${user.name} (${user.email})`;
+                assignUserSelect.appendChild(option);
+            });
+        }
+
+        async function assignTicket() {
+            if (currentUser.role !== 'admin') return;
+
+            const ticketId = document.getElementById('save-status-btn').getAttribute('data-id');
+            const userId = document.getElementById('assign-user').value;
+
+            if (!userId) {
+                showNotification('Please select a user to assign the ticket to', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tickets/assignTicket/${ticketId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ userId })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to assign ticket');
+                }
+
+                const data = await response.json();
+                const ticket = data.ticket;
+
+                // Update ticket in lists immutably
+                allTickets = allTickets.map(t => (t._id === ticketId ? { ...t, assignedTo: ticket.assignedTo } : t));
+                userTickets = userTickets.map(t => (t._id === ticketId ? { ...t, assignedTo: ticket.assignedTo } : t));
+
+                // Update assignee in modal
+                const assignedUser = allUsers.find(u => u._id === userId);
+                document.getElementById('view-ticket-assignee').textContent = assignedUser ? assignedUser.name : 'Not assigned';
+
+                // Reset dropdown
+                document.getElementById('assign-user').value = '';
+
+                // Refresh ticket lists
+                renderUserTickets();
+                renderAdminTickets();
+                renderRecentTickets();
+
+                showNotification('Ticket assigned successfully');
+            } catch (error) {
+                console.error('Error assigning ticket:', error);
+                showNotification(`Failed to assign ticket: ${error.message}`, 'error');
+            }
+        }
+
+        function initCharts() {
+            const statusCtx = document.getElementById('status-chart').getContext('2d');
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Open', 'In Progress', 'Closed'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#FECACA', '#FEF3C7', '#D1FAE5'],
+                        borderColor: ['#B91C1C', '#92400E', '#065F46'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+
+            // Timeline chart
+            const timelineCtx = document.getElementById('timeline-chart').getContext('2d');
+            timelineChart = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Tickets Created',
+                        data: [],
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Analytics status chart
+            const analyticsStatusCtx = document.getElementById('analytics-status-chart').getContext('2d');
+            analyticsStatusChart = new Chart(analyticsStatusCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Open', 'In Progress', 'Closed'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#FECACA', '#FEF3C7', '#D1FAE5'],
+                        borderColor: ['#B91C1C', '#92400E', '#065F46'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+
+            // Analytics timeline chart
+            const analyticsTimelineCtx = document.getElementById('analytics-timeline-chart').getContext('2d');
+            analyticsTimelineChart = new Chart(analyticsTimelineCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Tickets Created',
+                        data: [],
+                        backgroundColor: '#3B82F6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('api/tickets/summary', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load summary data');
+
+                const data = await response.json();
+
+                document.getElementById('total-tickets').textContent = data.totalTickets;
+                document.getElementById('open-tickets').textContent = data.openTickets;
+                document.getElementById('progress-tickets').textContent = data.inProgressTickets;
+                document.getElementById('closed-tickets').textContent = data.closedTickets;
+                document.getElementById('total-users').textContent = data.totalUsers + data.totalAdmins;
+                document.getElementById('admin-users').textContent = data.totalAdmins;
+                document.getElementById('regular-users').textContent = data.totalUsers;
+
+                // Update charts
+                updateStatusChart(data.openTickets, data.inProgressTickets, data.closedTickets);
+
+                // Load graph data
+                await loadGraphData();
+
+                // Calculate percentages for user bars
+                const totalUsers = data.totalUsers + data.totalAdmins;
+                const adminPercent = (data.totalAdmins / totalUsers) * 100;
+                const regularPercent = (data.totalUsers / totalUsers) * 100;
+
+                document.getElementById('admin-users-bar').style.width = `${adminPercent}%`;
+                document.getElementById('regular-users-bar').style.width = `${regularPercent}%`;
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showNotification('Failed to load dashboard data', 'error');
+            }
+        }
+
+        // Load graph data for timeline charts
+        async function loadGraphData() {
+            try {
+                const response = await fetch('/api/tickets/graph-data', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load graph data');
+
+                const data = await response.json();
+
+                // Update timeline charts
+                updateTimelineChart(data.labels, data.values);
+
+            } catch (error) {
+                console.error('Error loading graph data:', error);
+                showNotification('Failed to load graph data', 'error');
+            }
+        }
+
+        // Update status chart with new data
+        function updateStatusChart(open, inProgress, closed) {
+            statusChart.data.datasets[0].data = [open, inProgress, closed];
+            statusChart.update();
+
+            analyticsStatusChart.data.datasets[0].data = [open, inProgress, closed];
+            analyticsStatusChart.update();
+        }
+
+        // Update timeline chart with new data
+        function updateTimelineChart(labels, values) {
+            timelineChart.data.labels = labels;
+            timelineChart.data.datasets[0].data = values;
+            timelineChart.update();
+
+            analyticsTimelineChart.data.labels = labels;
+            analyticsTimelineChart.data.datasets[0].data = values;
+            analyticsTimelineChart.update();
+        }
+
+        // Load user tickets
+        async function loadTickets() {
+            try {
+                const response = await fetch('/api/tickets/getTicket', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load tickets');
+
+                const data = await response.json();
+
+                // Store tickets
+                userTickets = data;
+
+                // Update ticket counter in sidebar
+                const openTickets = data.filter(ticket => ticket.status === 'ouvert').length;
+                document.getElementById('ticket-count').textContent = openTickets;
+
+                // Render tickets
+                renderUserTickets();
+
+                // Render recent tickets on dashboard
+                renderRecentTickets();
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+                showNotification('Failed to load tickets', 'error');
+            }
+        }
+
+        // Load all tickets (admin only)
+        async function loadAdminTickets() {
+            if (currentUser.role !== 'admin') return;
+
+            try {
+                const response = await fetch('/api/tickets/getTicket', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load tickets');
+
+                const data = await response.json();
+
+                // Store tickets
+                allTickets = data;
+
+                // Render admin tickets
+                renderAdminTickets();
+
+            } catch (error) {
+                console.error('Error loading admin tickets:', error);
+                showNotification('Failed to load admin tickets', 'error');
+            }
+        }
+
+        // Render user tickets
+        function renderUserTickets() {
+            const container = document.getElementById('user-tickets-container');
+            container.innerHTML = '';
+
+            // Apply filters if any
+            const filteredTickets = filterTickets(userTickets);
+
+            // Paginate
+            const startIndex = (currentPage - 1) * ticketsPerPage;
+            const endIndex = startIndex + ticketsPerPage;
+            const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
+
+            // Update pagination info
+            document.getElementById('showing-tickets').textContent = paginatedTickets.length;
+            document.getElementById('total-user-tickets').textContent = filteredTickets.length;
+
+            // Enable/disable pagination buttons
+            document.getElementById('prev-page').disabled = currentPage <= 1;
+            document.getElementById('next-page').disabled = currentPage >= Math.ceil(filteredTickets.length / ticketsPerPage);
+
+            if (paginatedTickets.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6">
+                        <i class="fas fa-ticket-alt text-gray-300 text-4xl mb-3"></i>
+                        <p class="text-gray-500">No tickets found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Render each ticket
+            paginatedTickets.forEach(ticket => {
+                const statusClass = getStatusClass(ticket.status);
+                const statusText = getStatusText(ticket.status);
+                const dateText = formatDate(ticket.createdAt);
+                const assigneeName = ticket.assignedTo?.name || 'Not assigned';
+
+                const ticketElement = document.createElement('div');
+                ticketElement.className = 'py-4 ticket-card hover:bg-gray-50 p-2 rounded-lg';
+                ticketElement.innerHTML = `
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div class="flex items-start space-x-3">
+                            <div class="p-2 rounded-full ${statusClass} bg-opacity-20">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-medium">${ticket.title}</h3>
+                                <p class="text-sm text-gray-500 line-clamp-1">${ticket.description}</p>
+                                <p class="text-xs text-gray-400 mt-1">Created by ${ticket.createdBy?.name || 'Unknown'} on ${dateText}</p>
+                                <p class="text-xs text-gray-400 mt-1">Assigned to ${assigneeName}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center mt-2 md:mt-0 space-x-2">
+                            <span class="px-2 py-1 text-xs rounded-full ${statusClass}">${statusText}</span>
+                            <button class="view-ticket-btn p-2 rounded-full hover:bg-gray-200" data-id="${ticket._id}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(ticketElement);
+
+                // Add click event to view button
+                ticketElement.querySelector('.view-ticket-btn').addEventListener('click', () => {
+                    viewTicket(ticket._id);
+                });
+            });
+        }
+        // Render admin tickets
+        // Continue from the renderAdminTickets function where it was cut off
+        function renderAdminTickets() {
+            if (currentUser.role !== 'admin') return;
+
+            const container = document.getElementById('admin-tickets-container');
+            container.innerHTML = '';
+
+            // Apply filters if any
+            const filteredTickets = filterTickets(allTickets, true);
+
+            // Paginate
+            const startIndex = (adminCurrentPage - 1) * ticketsPerPage;
+            const endIndex = startIndex + ticketsPerPage;
+            const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
+
+            // Update pagination info
+            document.getElementById('showing-admin-tickets').textContent = paginatedTickets.length;
+            document.getElementById('total-admin-tickets').textContent = filteredTickets.length;
+
+            // Enable/disable pagination buttons
+            document.getElementById('admin-prev-page').disabled = adminCurrentPage <= 1;
+            document.getElementById('admin-next-page').disabled = adminCurrentPage >= Math.ceil(filteredTickets.length / ticketsPerPage);
+
+            if (paginatedTickets.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6">
+                        <i class="fas fa-ticket-alt text-gray-300 text-4xl mb-3"></i>
+                        <p class="text-gray-500">No tickets found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Render each ticket
+            paginatedTickets.forEach(ticket => {
+                const statusClass = getStatusClass(ticket.status);
+                const statusText = getStatusText(ticket.status);
+                const dateText = formatDate(ticket.createdAt);
+                const assigneeName = ticket.assignedTo?.name || 'Not assigned';
+
+                const ticketElement = document.createElement('div');
+                ticketElement.className = 'py-4 ticket-card hover:bg-gray-50 p-2 rounded-lg';
+                ticketElement.innerHTML = `
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div class="flex items-start space-x-3">
+                            <div class="p-2 rounded-full ${statusClass} bg-opacity-20">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-medium">${ticket.title}</h3>
+                                <p class="text-sm text-gray-500 line-clamp-1">${ticket.description}</p>
+                                <p class="text-xs text-gray-400 mt-1">Created by ${ticket.createdBy?.name || 'Unknown'} on ${dateText}</p>
+                                <p class="text-xs text-gray-400 mt-1">Assigned to ${assigneeName}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center mt-2 md:mt-0 space-x-2">
+                            <span class="px-2 py-1 text-xs rounded-full ${statusClass}">${statusText}</span>
+                            <button class="view-ticket-btn p-2 rounded-full hover:bg-gray-200" data-id="${ticket._id}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(ticketElement);
+
+                // Add click event to view button
+                ticketElement.querySelector('.view-ticket-btn').addEventListener('click', () => {
+                    viewTicket(ticket._id, true);
+                });
+            });
+        }
+        // Render recent tickets on dashboard
+        function renderRecentTickets() {
+            const container = document.getElementById('recent-tickets');
+            container.innerHTML = '';
+
+            // Get latest 3 tickets
+            const recentTickets = [...userTickets].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3);
+
+            if (recentTickets.length === 0) {
+                container.innerHTML = `
+            <div class="text-center py-6">
+                <i class="fas fa-ticket-alt text-gray-300 text-4xl mb-3"></i>
+                <p class="text-gray-500">No recent tickets</p>
+            </div>
+        `;
+                return;
+            }
+
+            // Render each recent ticket
+            recentTickets.forEach(ticket => {
+                const statusClass = getStatusClass(ticket.status);
+                const statusText = getStatusText(ticket.status);
+                const dateText = formatDate(ticket.createdAt);
+
+                const ticketElement = document.createElement('div');
+                ticketElement.className = 'py-2 ticket-card hover:bg-gray-50 p-2 rounded-lg';
+                ticketElement.innerHTML = `
+            <div class="flex items-start space-x-3">
+                <div class="p-2 rounded-full ${statusClass} bg-opacity-20">
+                    <i class="fas fa-ticket-alt"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex justify-between">
+                        <h3 class="font-medium">${ticket.title}</h3>
+                        <span class="px-2 py-1 text-xs rounded-full ${statusClass}">${statusText}</span>
+                    </div>
+                    <p class="text-sm text-gray-500 line-clamp-1">${ticket.description}</p>
+                    <p class="text-xs text-gray-400 mt-1">Created on ${dateText}</p>
+                </div>
+            </div>
+        `;
+
+                container.appendChild(ticketElement);
+
+                // Add click event to the ticket element
+                ticketElement.addEventListener('click', () => {
+                    viewTicket(ticket._id);
+                });
+            });
+        }
+
+        // Filter tickets based on search and status
+        function filterTickets(tickets, isAdmin = false) {
+            const searchInput = isAdmin ? document.getElementById('admin-ticket-search').value.toLowerCase() : document.getElementById('ticket-search').value.toLowerCase();
+            const statusFilter = isAdmin ? document.getElementById('admin-status-filter').value : document.getElementById('status-filter').value;
+            const sortBy = isAdmin ? document.getElementById('admin-sort-tickets').value : document.getElementById('sort-tickets').value;
+
+            // Filter by search term and status
+            let filteredTickets = tickets.filter(ticket => {
+                const matchesSearch = ticket.title.toLowerCase().includes(searchInput) ||
+                    ticket.description.toLowerCase().includes(searchInput);
+                const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Sort tickets
+            switch (sortBy) {
+                case 'newest':
+                    filteredTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    break;
+                case 'oldest':
+                    filteredTickets.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                    break;
+                case 'title':
+                    filteredTickets.sort((a, b) => a.title.localeCompare(b.title));
+                    break;
+            }
+
+            return filteredTickets;
+        }
+
+        // Filter user tickets based on search input, status, and sort
+        function filterUserTickets() {
+            currentPage = 1;
+            renderUserTickets();
+        }
+
+        // Filter admin tickets based on search input, status, and sort
+        function filterAdminTickets() {
+            adminCurrentPage = 1;
+            renderAdminTickets();
+        }
+
+        // View ticket details
+        function viewTicket(ticketId, isAdmin = false) {
+            const tickets = isAdmin ? allTickets : userTickets;
+            const ticket = tickets.find(t => t._id === ticketId);
+
+            if (!ticket) {
+                showNotification('Ticket not found', 'error');
+                return;
+            }
+
+            // Set ticket details in modal
+            document.getElementById('view-ticket-title').textContent = ticket.title;
+            document.getElementById('view-ticket-id').textContent = `#${ticket._id.substring(0, 8)}`;
+            document.getElementById('view-ticket-description').textContent = ticket.description;
+            document.getElementById('view-ticket-creator').textContent = ticket.createdBy?.name || 'Unknown';
+            document.getElementById('view-ticket-date').textContent = formatDate(ticket.createdAt);
+            document.getElementById('view-ticket-assignee').textContent = ticket.assignedTo?.name || 'Not assigned';
+            document.getElementById('view-ticket-updated').textContent = formatDate(ticket.updatedAt || ticket.createdAt);
+
+            // Set status class and text
+            const statusElement = document.getElementById('view-ticket-status');
+            statusElement.className = `px-2 py-1 text-xs rounded-full ${getStatusClass(ticket.status)}`;
+            statusElement.textContent = getStatusText(ticket.status);
+
+            // Set status dropdown value
+            document.getElementById('update-status').value = ticket.status;
+
+            // Show admin actions if user is admin
+            const adminActions = document.querySelectorAll('.admin-only-actions, .admin-only');
+            if (currentUser.role === 'admin') {
+                adminActions.forEach(el => el.classList.remove('hidden'));
+
+                // Set event handler for status update
+                document.getElementById('save-status-btn').setAttribute('data-id', ticket._id);
+
+                // Set event handler for ticket deletion
+                document.getElementById('delete-ticket-btn').setAttribute('data-id', ticket._id);
+
+                document.getElementById('assign-user').value = ticket.assignedTo?._id || '';
+            } else {
+                adminActions.forEach(el => el.classList.add('hidden'));
+            }
+
+            // Show modal
+            document.getElementById('view-ticket-modal').classList.remove('hidden');
+        }
+        // Create new ticket
+        async function createTicket() {
+            const title = document.getElementById('ticket-title').value.trim();
+            const description = document.getElementById('ticket-description').value.trim();
+
+            if (!title || !description) {
+                showNotification('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/tickets/createTicket', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        status: 'ouvert'
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to create ticket');
+
+                const data = await response.json();
+
+                // Add new ticket to user tickets
+                userTickets.unshift(data);
+
+                // If admin, add to all tickets as well
+                if (currentUser.role === 'admin') {
+                    allTickets.unshift(data);
+                }
+
+                // Reset form
+                document.getElementById('create-ticket-form').reset();
+
+                // Hide modal
+                document.getElementById('create-ticket-modal').classList.add('hidden');
+
+                // Refresh ticket lists
+                renderUserTickets();
+                if (currentUser.role === 'admin') {
+                    renderAdminTickets();
+                }
+                renderRecentTickets();
+
+                // Refresh dashboard data
+                loadDashboardData();
+
+                showNotification('Ticket created successfully');
+            } catch (error) {
+                console.error('Error creating ticket:', error);
+                showNotification('Failed to create ticket', 'error');
+            }
+        }
+
+        // Update ticket status
+        async function updateTicketStatus() {
+            const ticketId = this.getAttribute('data-id');
+            const status = document.getElementById('update-status').value;
+
+            try {
+                const response = await fetch(`/api/tickets/updateTicket/${ticketId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status })
+                });
+
+                if (!response.ok) throw new Error('Failed to update ticket status');
+
+                // Update ticket in lists
+                const ticket = allTickets.find(t => t._id === ticketId);
+                if (ticket) {
+                    ticket.status = status;
+                    ticket.updatedAt = new Date().toISOString();
+                }
+
+                const userTicket = userTickets.find(t => t._id === ticketId);
+                if (userTicket) {
+                    userTicket.status = status;
+                    userTicket.updatedAt = new Date().toISOString();
+                }
+
+                // Hide modal
+                document.getElementById('view-ticket-modal').classList.add('hidden');
+
+                // Refresh ticket lists
+                renderUserTickets();
+                if (currentUser.role === 'admin') {
+                    renderAdminTickets();
+                }
+                renderRecentTickets();
+
+                // Refresh dashboard data
+                loadDashboardData();
+
+                showNotification('Ticket status updated successfully');
+            } catch (error) {
+                console.error('Error updating ticket status:', error);
+                showNotification('Failed to update ticket status', 'error');
+            }
+        }
+
+        // Delete ticket
+        async function deleteTicket() {
+            if (currentUser.role !== 'admin') return;
+
+            const ticketId = this.getAttribute('data-id');
+
+            if (!confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tickets/deleteTicket/${ticketId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to delete ticket');
+
+                // Remove ticket from lists
+                allTickets = allTickets.filter(t => t._id !== ticketId);
+                userTickets = userTickets.filter(t => t._id !== ticketId);
+
+                // Hide modal
+                document.getElementById('view-ticket-modal').classList.add('hidden');
+
+                // Refresh ticket lists
+                renderUserTickets();
+                renderAdminTickets();
+                renderRecentTickets();
+
+                // Refresh dashboard data
+                loadDashboardData();
+
+                showNotification('Ticket deleted successfully');
+            } catch (error) {
+                console.error('Error deleting ticket:', error);
+                showNotification('Failed to delete ticket', 'error');
+            }
+        }
+
+        // Update user profile
+        async function updateProfile() {
+            const name = document.getElementById('profile-update-name').value.trim();
+            const email = document.getElementById('profile-update-email').value.trim();
+
+            if (!name || !email) {
+                showNotification('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users/updateProfile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ name, email })
+                });
+
+                if (!response.ok) throw new Error('Failed to update profile');
+
+                const data = await response.json();
+
+                // Update user in local storage
+                currentUser.name = name;
+                currentUser.email = email;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+
+                // Update UI
+                setUserInfo();
+
+                showNotification('Profile updated successfully');
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showNotification('Failed to update profile', 'error');
+            }
+        }
+
+        // Update user password
+        async function updatePassword() {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showNotification('Please fill in all password fields', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showNotification('New passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users/updatePassword', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+
+                if (!response.ok) throw new Error('Failed to update password');
+
+                // Reset form
+                document.getElementById('password-form').reset();
+
+                showNotification('Password updated successfully');
+            } catch (error) {
+                console.error('Error updating password:', error);
+                showNotification('Failed to update password', 'error');
+            }
+        }
+
+        // Toggle dark/light theme
+        function toggleTheme() {
+            darkMode = !darkMode;
+            const themeIcon = document.getElementById('theme-toggle').querySelector('i');
+
+            if (darkMode) {
+                document.documentElement.classList.add('dark');
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+            }
+
+            localStorage.setItem('darkMode', darkMode);
+        }
+
+        // Logout function
+        function logout() {
+            // Clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+
+            // Redirect to login page
+            window.location.href = '/auth';
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notification-message');
+
+            // Set message
+            notificationMessage.textContent = message;
+
+            // Set notification type
+            notification.querySelector('div').className = type === 'success'
+                ? 'bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md flex justify-between items-center'
+                : 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md flex justify-between items-center';
+
+            // Show notification
+            notification.classList.remove('translate-x-full');
+
+            // Hide notification after 3 seconds
+            setTimeout(() => {
+                hideNotification();
+            }, 3000);
+        }
+
+        // Hide notification
+        function hideNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.add('translate-x-full');
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Get status class for styling
+        function getStatusClass(status) {
+            switch (status) {
+                case 'ouvert':
+                    return 'status-open';
+                case 'en cours':
+                    return 'status-progress';
+                case 'clôturé':
+                    return 'status-closed';
+                default:
+                    return 'status-open';
+            }
+        }
+
+        // Get status text for display
+        function getStatusText(status) {
+            switch (status) {
+                case 'ouvert':
+                    return 'Open';
+                case 'en cours':
+                    return 'In Progress';
+                case 'clôturé':
+                    return 'Closed';
+                default:
+                    return 'Open';
+            }
+        }
+    </script>

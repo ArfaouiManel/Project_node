@@ -1,6 +1,8 @@
 const Ticket = require('../models/ticket.model');
 const User = require('../models/user.model');
-const { sendTicketUpdateEmail } = require('../config/mailer');
+const mongoose = require('mongoose');
+
+const { sendTicketUpdateEmail, sendTicketAssignmentEmail } = require('../config/mailer');
 
 // Créer un ticket
 exports.createTicket = async (req, res) => {
@@ -17,10 +19,13 @@ exports.createTicket = async (req, res) => {
   }
 };
 
-// Lister les tickets (admin voit tout, user voit ses tickets)
+// Lister les tickets (admin voit tout, user voit ses tickets et ceux assignés)
 exports.getTickets = async (req, res) => {
   try {
-    const filter = req.user.role === 'admin' ? {} : { createdBy: req.user.id };
+    const filter = req.user.role === 'admin' 
+      ? {} 
+      : { $or: [{ createdBy: req.user.id }, { assignedTo: req.user.id }] }; // Filter tickets created by or assigned to the user
+
     const tickets = await Ticket.find(filter).populate('createdBy assignedTo');
     
     res.json(tickets);
@@ -28,6 +33,7 @@ exports.getTickets = async (req, res) => {
     res.status(500).json({ message: 'Erreur liste tickets', error: err.message });
   }
 };
+
 
 // Mettre à jour le statut / assignation
 exports.updateTicket = async (req, res) => {
@@ -57,7 +63,45 @@ exports.deleteTicket = async (req, res) => {
   }
 };
 
+// Assigner un ticket à un utilisateur non-admin
+exports.assignTicket = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const ticketId = req.params.id;
 
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(ticketId) || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid ticket or user ID' });
+    }
+
+    const ticket = await Ticket.findById(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket introuvable' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur introuvable' });
+    }
+    if (user.role === 'admin') {
+      return res.status(400).json({ message: 'Impossible d\'assigner à un admin' });
+    }
+
+    // Update ticket
+    ticket.assignedTo = userId;
+    await ticket.save();
+    console.log('Ticket updated:', ticket); // Debug log
+
+    // Populate assignedTo for response
+    const updatedTicket = await Ticket.findById(ticketId).populate('assignedTo');
+    await sendTicketAssignmentEmail(updatedTicket, user);
+
+    res.json({ message: 'Ticket assigné avec succès', ticket: updatedTicket });
+  } catch (err) {
+    console.error('Error in assignTicket:', err);
+    res.status(500).json({ message: 'Erreur assignation ticket', error: err.message });
+  }
+};
 exports.getSummary = async (req, res) => {
   try {
     const totalTickets = await Ticket.countDocuments();
